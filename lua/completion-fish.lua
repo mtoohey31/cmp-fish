@@ -21,7 +21,7 @@ function F.getCompletionItems(prefix)
   local output = pipe:read("*a")
   pipe:close()
   os.remove(tmppath)
-  for completion in output:gmatch('[^\n]*\n?') do
+  for completion in vim.gsplit(output, '\n') do
     local index = completion:find('\t')
     if index ~= nil then
       local word = completion:sub(0, index - 1)
