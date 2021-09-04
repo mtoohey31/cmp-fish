@@ -1,5 +1,4 @@
 local F = {}
-local util = require('completion/util')
 
 function F.getCompletionItems(prefix)
   local complete_items = {}
@@ -8,11 +7,12 @@ function F.getCompletionItems(prefix)
   local colnr = cursor_pos[0]
   local lines = vim.api.nvim_buf_get_lines(0, 0, linenr, false)
   lines[linenr] = lines[linenr]:sub(0, colnr)
-  local script = 'complete --do-complete \''
-  for _, line in pairs(lines) do
-    script = script .. '\n' .. line:gsub("'", "\\'")
+  local script_parts = {'complete --do-complete \''}
+  for _, line in ipairs(lines) do
+    local escaped_line = line:gsub("\\", "\\\\"):gsub("'", "\\'")
+    table.insert(script_parts, escaped_line)
   end
-  script = script .. "'"
+  local script = table.concat(script_parts, '\n') .. "'"
   local tmppath = os.tmpname()
   local tmpfile = io.open(tmppath, "w")
   tmpfile:write(script)
