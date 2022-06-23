@@ -71,8 +71,8 @@ source.complete = function(self, params, callback)
   local preceding_line = params.context.cursor.line - 1
   while preceding_line >= 0 do
     local line = vim.api.nvim_buf_get_lines(0, preceding_line, preceding_line + 1, true)[1]
+    -- handles multi-line commands continued via a trailing backslash
     if line:match("\\%s*") ~= nil then
-      print("matched")
       table.insert(relevant_lines, line)
       preceding_line = preceding_line - 1
     else
