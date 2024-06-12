@@ -1,10 +1,23 @@
 -- cspell:ignore jobstart jobstop chansend nvim
 
-local source = {}
+local source = {
+	config = {
+		fish_path = "fish",
+	},
+}
+
+--- Sets up the source.
+---
+--- This function must be called before use.
+source.setup = function(config)
+	config = config or {}
+	source.config = vim.tbl_extend("force", source.config, config)
+	require("cmp").register_source("fish", source.new())
+end
 
 local create_job = function(self)
-  return vim.fn.jobstart({ "fish", "-ic", 'while read val -P ""; complete -C "$val"; end' }, {
-    shell = "fish",
+  return vim.fn.jobstart({ self.config.fish_path, "-ic", 'while read val -P ""; complete -C "$val"; end' }, {
+    shell = self.config.fish_path,
     on_stdout = function(_, data)
       for _, line in ipairs(data) do
         if line == "" and self.callback ~= nil then
