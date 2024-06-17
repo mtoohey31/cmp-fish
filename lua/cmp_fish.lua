@@ -7,12 +7,14 @@ source.new = function()
   local self = setmetatable({}, {
     __index = source,
   })
-  self.fish_job = fish_job_module:new()
+  self.fish_job = nil
   return self
 end
 
 source.reset = function(self)
-  self.fish_job:delete()
+  if self.fish_job ~= nil then
+    self.fish_job:delete()
+  end
   self.fish_job = fish_job_module:new()
 end
 
@@ -41,6 +43,10 @@ local reverse_list = function(list)
 end
 
 source.complete = function(self, params, callback)
+  if self.fish_job == nil then
+    self.fish_job = fish_job_module:new()
+  end
+
   self.output_buffer = {}
   local relevant_lines = { params.context.cursor_before_line .. "\n" }
   local preceding_line = params.context.cursor.line - 1
