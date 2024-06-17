@@ -9,17 +9,21 @@
 local FishJob = {}
 
 --- Starts a new Fish job.
-function FishJob:new()
+---
+---@tparam string|nil fish_path
+function FishJob:new(fish_path)
+  fish_path = fish_path or "fish"
   local fish_job = {
     job_id = nil,
     output_buffer = {},
+    fish_path = fish_path,
     callback = nil,
   }
   setmetatable(fish_job, self)
   self.__index = self
 
-  fish_job.job_id = vim.fn.jobstart({ "fish", "-ic", 'while read val -P ""; complete -C "$val"; end' }, {
-    shell = "fish",
+  fish_job.job_id = vim.fn.jobstart({ fish_path, "-ic", 'while read val -P ""; complete -C "$val"; end' }, {
+    shell = fish_path,
     on_stdout = function(_, data)
       for _, line in ipairs(data) do
         if line == "" and fish_job.callback ~= nil then

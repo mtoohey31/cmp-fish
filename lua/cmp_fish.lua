@@ -3,6 +3,9 @@
 local source = {}
 local fish_job_module = require("cmp_fish.fish_job")
 
+---@class (exact) Options
+---@field fish_path string|nil
+
 source.new = function()
   local self = setmetatable({}, {
     __index = source,
@@ -15,7 +18,6 @@ source.reset = function(self)
   if self.fish_job ~= nil then
     self.fish_job:delete()
   end
-  self.fish_job = fish_job_module:new()
 end
 
 source.is_available = function()
@@ -42,9 +44,25 @@ local reverse_list = function(list)
   return reversed_list
 end
 
+--- Validates options.
+---
+---@treturn Options
+local validate_options = function(options)
+  vim.validate({
+    fish_path = { options.fish_path, { "string", "nil" } },
+  })
+  return options
+end
+
 source.complete = function(self, params, callback)
+  local options = validate_options(params.option)
   if self.fish_job == nil then
-    self.fish_job = fish_job_module:new()
+    self.fish_job = fish_job_module:new(options.fish_path)
+  elseif self.fish_job.fish_path ~= options.fish_path then
+    -- A change of path shouldn’t really happen in most setups, because people usually hardcode it in their config, but
+    -- in case that happens, reset the job.
+    self.fish_job:delete()
+    self.fish_job = fish_job_module:new(options.fish_path)
   end
 
   self.output_buffer = {}
