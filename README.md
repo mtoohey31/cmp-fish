@@ -15,3 +15,15 @@ cmp.setup({
   })
 })
 ```
+
+## Configuration
+
+You can provide a custom Fish path using options:
+
+```lua
+cmp.setup({
+  sources = cmp.config.sources({
+    { name = 'fish', option = { fish_path = "/usr/bin/fish" } }
+  })
+})
+```

@@ -1,56 +1,23 @@
 -- cspell:ignore jobstart jobstop chansend nvim
 
 local source = {}
+local fish_job_module = require("cmp_fish.fish_job")
 
-local create_job = function(self)
-  return vim.fn.jobstart({ "fish", "-ic", 'while read val -P ""; complete -C "$val"; end' }, {
-    shell = "fish",
-    on_stdout = function(_, data)
-      for _, line in ipairs(data) do
-        if line == "" and self.callback ~= nil then
-          local complete_items = {}
-          for _, item in ipairs(self.output_buffer) do
-            local index = item:find("\t")
-            if index ~= nil then
-              local label = item:sub(0, index - 1)
-              local detail = item:sub(index + 1, item:len())
-              local kind = 12
-              if string.find(detail, "^Executable") then
-                kind = 3
-              elseif string.find(label, "^-") then
-                kind = 14
-              end
-              table.insert(complete_items, {
-                label = label,
-                kind = kind,
-                detail = detail,
-              })
-            end
-          end
-          self.callback(complete_items)
-          self.callback = nil
-          self.output_buffer = {}
-        else
-          table.insert(self.output_buffer, line)
-        end
-      end
-    end,
-  })
-end
+---@class (exact) Options
+---@field fish_path string|nil
 
 source.new = function()
   local self = setmetatable({}, {
     __index = source,
   })
-  self.output_buffer = {}
-  self.fish_job = create_job(self)
+  self.fish_job = nil
   return self
 end
 
 source.reset = function(self)
-  vim.fn.jobstop(self.fish_job)
-  self.output_buffer = {}
-  self.fish_job = create_job(self)
+  if self.fish_job ~= nil then
+    self.fish_job:delete()
+  end
 end
 
 source.is_available = function()
@@ -65,7 +32,39 @@ source.get_keyword_pattern = function(_)
   return [[.]]
 end
 
+--- Reverses a list.
+---
+---@tparam table list
+---@tparam table
+local reverse_list = function(list)
+  local reversed_list = {}
+  for i = #list, 1, -1 do
+    table.insert(reversed_list, list[i])
+  end
+  return reversed_list
+end
+
+--- Validates options.
+---
+---@treturn Options
+local validate_options = function(options)
+  vim.validate({
+    fish_path = { options.fish_path, { "string", "nil" } },
+  })
+  return options
+end
+
 source.complete = function(self, params, callback)
+  local options = validate_options(params.option)
+  if self.fish_job == nil then
+    self.fish_job = fish_job_module:new(options.fish_path)
+  elseif self.fish_job.fish_path ~= options.fish_path then
+    -- A change of path shouldn’t really happen in most setups, because people usually hardcode it in their config, but
+    -- in case that happens, reset the job.
+    self.fish_job:delete()
+    self.fish_job = fish_job_module:new(options.fish_path)
+  end
+
   self.output_buffer = {}
   local relevant_lines = { params.context.cursor_before_line .. "\n" }
   local preceding_line = params.context.cursor.line - 1
@@ -79,10 +78,7 @@ source.complete = function(self, params, callback)
       break
     end
   end
-  for i = #relevant_lines, 1, -1 do
-    vim.fn.chansend(self.fish_job, relevant_lines[i])
-  end
-  self.callback = callback
+  self.fish_job:send(reverse_list(relevant_lines), callback)
 end
 
 return source
